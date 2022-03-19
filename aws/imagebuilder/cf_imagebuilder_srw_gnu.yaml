@@ -1,0 +1,248 @@
+---
+# Description:
+# This template creates an EC2 Image Builder Pipeline for the Short Range Weather app and dependencies with GNU
+
+Description: EC2 Image Builder Pipeline for SRW v1.0.1 and dependencies with GNU
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+
+  SrwComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: srw-1-0-1
+      Platform: Linux
+      Version: 1.0.1
+      Data: |
+        name: SRW v1.0.1 and Dependencies
+        description: 'Build and install all SRW dependencies'
+        schemaVersion: 1.0
+
+        phases:
+          - name: build
+            steps:
+              - name: update_os
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - yum -y update
+                    - yum -y install gcc gcc-c++ gcc-gfortran m4 curl-devel git cmake pkgconfig expat-devel libX11-devel libXmu-devel Xaw3d-devel libXaw-devel
+                    - yum install -y proj-devel geos-devel
+
+              - name: configure_bash
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - echo '*    hard    stack    unlimited' | tee -a /etc/security/limits.conf
+                    - echo '*    soft    stack    unlimited' | tee -a /etc/security/limits.conf
+
+              - name: download_source
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - aws s3 cp s3://srw-dep-src/gmp-6.2.1.tar.gz .
+                    - aws s3 cp s3://srw-dep-src/mpfr-4.1.0.tar.gz .
+                    - aws s3 cp s3://srw-dep-src/mpc-1.2.0.tar.gz .
+                    - aws s3 cp s3://srw-dep-src/gcc-9.1.0.tar.gz .
+
+              - name: build-gmp
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - tar -xzf gmp-6.2.1.tar.gz
+                    - cd gmp-6.2.1
+                    - ./configure --prefix=/opt/gmp --enable-cxx --enable-assert 2>&1 | tee configure.log
+                    - make -j 4 install 2>&1 | tee build.log
+                    - echo 'export GMP=/opt/gmp' | tee -a /etc/bashrc
+                    - echo 'export LD_LIBRARY_PATH=${GMP}/lib' | tee -a /etc/bashrc
+
+              - name: build-mpfr
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - tar -xzf mpfr-4.1.0.tar.gz
+                    - cd mpfr-4.1.0/
+                    - ./configure --prefix=/opt/mpfr --with-gmp=${GMP} --enable-assert 2>&1 | tee configure.log
+                    - make -j 4 install 2>&1 | tee build.log
+                    - echo 'export MPFR=/opt/mpfr' | tee -a /etc/bashrc
+                    - echo 'export LD_LIBRARY_PATH=${MPFR}/lib:${LD_LIBRARY_PATH}' | tee -a /etc/bashrc
+
+              - name: build-mpc
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - tar -xzf mpc-1.2.0.tar.gz
+                    - cd mpc-1.2.0
+                    - ./configure --prefix=/opt/mpc --with-gmp=${GMP} --with-mpfr=${MPFR} 2>&1 | tee configure.log
+                    - make -j 4 install 2>&1 | tee build.log
+                    - echo 'export MPC=/opt/mpc' | tee -a /etc/bashrc
+                    - echo 'export LD_LIBRARY_PATH=${MPC}/lib:${LD_LIBRARY_PATH}' | tee -a /etc/bashrc
+
+              - name: build-gcc
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - tar -xzf gcc-9.1.0.tar.gz
+                    - cd gcc-9.1.0
+                    - ./configure --prefix=/opt/gnu --enable-languages=c,c++,fortran,lto --enable-threads --disable-multilib --with-gmp=${GMP} --with-mpfr=${MPFR} --with-mpc=${MPC} 2>&1 | tee configure.log
+                    - make -j 4 2>&1 | tee build.log
+                    - make install 2>&1 | tee -a build.log
+                    - echo 'export GNU=/opt/gnu' | tee -a /etc/bashrc
+                    - echo 'export PATH=${GNU}/bin:${PATH}' | tee -a /etc/bashrc
+                    - echo 'export LD_LIBRARY_PATH=${GNU}/lib64:${LD_LIBRARY_PATH}' | tee -a /etc/bashrc
+
+              - name: disable-aws-openmpi
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - echo 'PATH="/opt/amazon/efa/bin/:$PATH"' > /etc/profile.d/efa.sh
+
+              - name: build-nceplibs-external
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - export CC="/opt/gnu/bin/gcc"
+                    - export CXX="/opt/gnu/bin/g++"
+                    - export FC="/opt/gnu/bin/gfortran"
+                    - export CMAKE_C_COMPILER="${CC}"
+                    - export CMAKE_CXX_COMPILER="${CXX}"
+                    - export CMAKE_Fortran_COMPILER="${FC}"
+                    - export NCEPLIBS="/opt/nceplibs"
+                    - export ESMFMKFILE="${NCEPLIBS}/lib64/esmf.mk"
+                    - git clone -b ufs-v2.0.0 --recursive https://github.com/NOAA-EMC/NCEPLIBS-external
+                    - cd NCEPLIBS-external/cmake-src
+                    - ./bootstrap --prefix=${NCEPLIBS} 2>&1| tee bootstrap.log
+                    - make -j 4 2>&1 | tee build.log
+                    - make install 2>&1 | tee install.log
+                    - echo 'export NCEPLIBS="/opt/nceplibs"' | tee -a /etc/bashrc
+                    - echo 'export PATH="${NCEPLIBS}/bin:${PATH}"' | tee -a /etc/bashrc
+                    - source /etc/bashrc
+                    - mkdir ../build
+                    - cd ../build
+                    - cmake -DCMAKE_INSTALL_PREFIX=${NCEPLIBS} -DCMAKE_PREFIX_PATH=${NCEPLIBS} -DOPENMP=ON .. 2>&1 | tee cmake.log
+                    - make -j 4 2>&1| tee build.log
+
+              - name: build-nceplibs
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - cd /opt/src
+                    - git clone -b ufs-v2.0.0 --recursive https://github.com/NOAA-EMC/NCEPLIBS
+                    - mkdir NCEPLIBS/build
+                    - cd NCEPLIBS/build
+                    - export CC="/opt/gnu/bin/gcc"
+                    - export CXX="/opt/gnu/bin/g++"
+                    - export FC="/opt/gnu/bin/gfortran"
+                    - export CMAKE_C_COMPILER="${CC}"
+                    - export CMAKE_CXX_COMPILER="${CXX}"
+                    - export CMAKE_Fortran_COMPILER="${FC}"
+                    - export ESMFMKFILE="${NCEPLIBS}/lib64/esmf.mk"
+                    - cmake -DCMAKE_INSTALL_PREFIX=${NCEPLIBS} ..
+                    - make 2>&1 | tee build.log
+                    - make deploy 2>&1 | tee deploy.log
+
+              - name: build-ufs-srweather-app
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - source /etc/bashrc
+                    - mkdir -p /opt/src
+                    - cd /opt/src
+                    - export bacio_DIR="${NCEPLIBS}"
+                    - export bufr_DIR="${NCEPLIBS}"
+                    - export crtm_DIR="${NCEPLIBS}"
+                    - export g2_DIR="${NCEPLIBS}"
+                    - export g2tmpl_DIR="${NCEPLIBS}"
+                    - export gfsio_DIR="${NCEPLIBS}"
+                    - export ip_DIR="${NCEPLIBS}"
+                    - export ip2_DIR="${NCEPLIBS}"
+                    - export landsfcutil_DIR="${NCEPLIBS}"
+                    - export nceppost_DIR="${NCEPLIBS}"
+                    - export nemsio_DIR="${NCEPLIBS}"
+                    - export nemsiogfs_DIR="${NCEPLIBS}"
+                    - export sfcio_DIR="${NCEPLIBS}"
+                    - export sigio_DIR="${NCEPLIBS}"
+                    - export sp_DIR="${NCEPLIBS}"
+                    - export w3emc_DIR="${NCEPLIBS}"
+                    - export w3nco_DIR="${NCEPLIBS}"
+                    - export wgrib2_DIR="${NCEPLIBS}"
+                    - export wrf_io_DIR="${NCEPLIBS}"
+                    - export CC="mpicc"
+                    - export CXX="mpicxx"
+                    - export FC="mpif90"
+                    - export CMAKE_C_COMPILER="${CC}"
+                    - export CMAKE_CXX_COMPILER="${CXX}"
+                    - export CMAKE_Fortran_COMPILER="${FC}"
+                    - export PATH="${NCEPLIBS}/bin:${PATH}"
+                    - export LD_LIBRARY_PATH="${NCEPLIBS}/lib64:${NCEPLIBS}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                    - export CMAKE_PREFIX_PATH="${NCEPLIBS}/${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
+                    - export ESMFMKFILE="${NCEPLIBS}/lib64/esmf.mk"
+                    - git clone -b ufs-v1.0.1 https://github.com/ufs-community/ufs-srweather-app.git
+                    - cd ufs-srweather-app
+                    - ./manage_externals/checkout_externals
+                    - mkdir build
+                    - cd build
+                    - cmake .. -DCMAKE_INSTALL_PREFIX=/opt/ufs-srweather-app
+                    - make 2>&1| tee build.log
+                    - source ${NCEPLIBS}/bin/setenv_nceplibs.sh
+
+              - name: enable-aws-openmpi
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - echo 'PATH="/opt/amazon/openmpi/bin/:$PATH"' >> /etc/profile.d/efa.sh
+
+
+  SrwImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      Name: srw-1-0-1
+      Version: 1.0.1
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            VolumeType: gp2
+            VolumeSize: 35
+      AdditionalInstanceConfiguration:
+        SystemsManagerAgent:
+          UninstallAfterBuild: true
+      Components:
+        - ComponentArn: !Ref SrwComponent
+      ParentImage: ami-012f43f744e8d1d1a  # us-east-1 parallel-cluster-3.0.2 amazon-linux-2 x86_64
+#      ParentImage: ami-088034fea7c4afffb  # us-east-2 parallel-cluster-3.0.2 amazon-linux-2 x86_64
+
+  SrwImageBuilderInfrastructure:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: srw-1-0-1
+      InstanceTypes:
+        - c5.xlarge
+      KeyPair: hahnd
+      InstanceProfileName: EC2InstanceProfileForImageBuilder
+      TerminateInstanceOnFailure: false
+
+  SrwImageBuilderPipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Name: srw-1-0-1
+      ImageRecipeArn: !Ref SrwImageRecipe
+      InfrastructureConfigurationArn: !Ref SrwImageBuilderInfrastructure
