@@ -200,10 +200,17 @@ Resources:
                     - ./manage_externals/checkout_externals
                     - mkdir build
                     - cd build
-                    - cmake .. -DCMAKE_INSTALL_PREFIX=/opt/ufs-srweather-app
+                    - cmake .. -DCMAKE_INSTALL_PREFIX=/opt/src/ufs-srweather-app
                     - make 2>&1| tee build.log
                     - source ${NCEPLIBS}/bin/setenv_nceplibs.sh
+                    - chown -R ec2-user.ec2-user /opt/src/ufs-srweather-app
 
+              - name: install-python-modules
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - pip3 install PyYAML Jinja2 f90nml
+        
               - name: enable-aws-openmpi
                 action: ExecuteBash
                 inputs:
