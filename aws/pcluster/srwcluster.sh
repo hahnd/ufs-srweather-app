@@ -18,7 +18,7 @@ function init_srw()
 {
   export region="us-east-1"
   export subnet="subnet-0927a21518035f16a"
-  export ami="ami-0d9dca56fc1e718c8"
+  export ami="ami-0efaf55db2f38d434"
 }
 
 

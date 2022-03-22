@@ -235,7 +235,7 @@ Resources:
       Components:
         - ComponentArn: !Ref SrwComponent
       ParentImage: ami-012f43f744e8d1d1a  # us-east-1 parallel-cluster-3.0.2 amazon-linux-2 x86_64
-#      ParentImage: ami-088034fea7c4afffb  # us-east-2 parallel-cluster-3.0.2 amazon-linux-2 x86_64
+
 
   SrwImageBuilderInfrastructure:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
@@ -245,7 +245,8 @@ Resources:
         - c5.xlarge
       KeyPair: hahnd
       InstanceProfileName: EC2InstanceProfileForImageBuilder
-      TerminateInstanceOnFailure: false
+      TerminateInstanceOnFailure: true
+
 
   SrwImageBuilderPipeline:
     Type: AWS::ImageBuilder::ImagePipeline
