@@ -5,38 +5,15 @@ the cluster, start a job on the cluster with Slurm, and stop the cluster.
 
 ## Environment Setup
 
-### Install ParallelCluster, AWS CLI, NodeJS, and jq:
-#### AWS Command Line Interface (CLI) and ParallelCluster
+### Install Dependencies - ParallelCluster, AWS CLI, NodeJS, and jq:
+
+<details>
+<summary><b>AWS Command Line Interface (CLI) and ParallelCluster</b></summary>
+
 ```
 python3 -m pip install --user awscli aws-parallelcluster==3.0.2
 ```
 
-#### NodeJS
-NodeJS can be installed anywhere, as long as it ends up in your
-PATH variable.  The example below installs it in ${HOME}/srw,
-but you can change the installation location to whatever you like.
-
-```
-# download from NodeJS.org
-mkdir -p ${HOME}/srw; cd ${HOME}/srw
-wget https://nodejs.org/dist/v16.13.2/node-v16.13.2-darwin-x64.tar.gz 
-  -- don't have wget?  use curl --
-curl https://nodejs.org/dist/v16.13.2/node-v16.13.2-darwin-x64.tar.gz > node-v16.13.2-darwin-x64.tar.gz
-
-# compute and compare checksums
-echo 900a952bb77533d349e738ff8a5179a4344802af694615f36320a888b49b07e6 
-shasum -a 256 node-v16.13.2-darwin-x64.tar.gz
-
-# DO NOT CONTINUE if checksum does not match
-tar -xzf node-v16.13.2-darwin-x64.tar.gz
-ln -s node-v16.13.2-darwin-x64 nodejs
-
-# add to path for BASH users:
-echo 'export PATH="${PATH}:${HOME}/srw/nodejs/bin"' | tee -a ~/.bashrc
-
-# add to path for CSH users:
-echo 'setenv PATH "${PATH}:${HOME}/srw/nodejs/bin"' | tee -a ~/.cshrc
-```
 
 It may be necessary to add the python bin directory to your PATH variable:
 ```
@@ -58,8 +35,40 @@ It may be necessary to add the python bin directory to your PATH variable:
     echo 'setenv PATH "${HOME}/Library/Python/3.9/bin:${PATH}"' | tee -a ~/.cshrc
     source ~/.cshrc
 ```
+</details>
 
-#### Installing jq
+<details>
+<summary><b>Install NodeJS</b></summary>
+NodeJS can be installed anywhere, as long as it ends up in your
+PATH variable.  The example below installs it in ${HOME}/srw,
+but you can change the installation location to whatever you like.
+
+```
+# download from NodeJS.org
+mkdir -p ${HOME}/opt && cd ${HOME}/opt
+wget https://nodejs.org/dist/v16.13.2/node-v16.13.2-darwin-x64.tar.gz 
+  -- don't have wget?  use curl --
+curl https://nodejs.org/dist/v16.13.2/node-v16.13.2-darwin-x64.tar.gz > node-v16.13.2-darwin-x64.tar.gz
+
+# compute and compare checksums
+echo 900a952bb77533d349e738ff8a5179a4344802af694615f36320a888b49b07e6 
+shasum -a 256 node-v16.13.2-darwin-x64.tar.gz
+
+# DO NOT CONTINUE if checksum does not match
+tar -xzf node-v16.13.2-darwin-x64.tar.gz
+ln -s node-v16.13.2-darwin-x64 nodejs
+
+# add to path for BASH users:
+echo 'export PATH="${PATH}:${HOME}/opt/nodejs/bin"' | tee -a ~/.bashrc
+
+# add to path for CSH users:
+echo 'setenv PATH "${PATH}:${HOME}/opt/nodejs/bin"' | tee -a ~/.cshrc
+```
+</details>
+
+<details>
+<summary><b>Install jq</b></summary>
+
 The jq utility is for parsing JSON formatted data on the command line
 and is used by the srwcluster.sh script.  It can be installed with brew
 or [ask RAL IT](mailto:ral-rt@rap.ucar.edu) to install it.
@@ -70,6 +79,7 @@ brew install jq
 
 email: ral-rt@rap.ucar.edu
 ```
+</details>
 
 ### Create your credentials file and set permissions
 ```
