@@ -1,6 +1,13 @@
 #! /bin/bash
 
 #
+# Copyright UCAR (C) 2022
+#
+# Script to simplify ImageBuilder pipeline operations
+#
+
+
+#
 # Global variables to help build the AWS command line
 #
 function init_global()
@@ -11,7 +18,7 @@ function init_global()
 
 
 #
-# Set the global variables for SRW
+# Set the global variables for SRW app
 #
 function init_srw()
 {
@@ -20,7 +27,6 @@ function init_srw()
   export image_name="srw-1-0-1"
   export region="us-east-1"
 }
-
 
 
 #

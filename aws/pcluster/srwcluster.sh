@@ -1,5 +1,10 @@
 #! /bin/bash
 
+#
+# Copyright UCAR (C) 2022
+#
+# Script to simplify ParallelCluster operations
+#
 
 #
 # Global variables used in multiple functions across all cluster types

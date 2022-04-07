@@ -1,3 +1,7 @@
+---
+# Copyright UCAR (C) 2022
+# ParallelCluster configuration for SRW app
+
 Region: __REGION__
 Image:
   Os: alinux2

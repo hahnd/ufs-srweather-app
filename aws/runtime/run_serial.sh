@@ -1,5 +1,7 @@
 #! /bin/bash
 
+# Copyright UCAR (C) 2022
+
 # set and create experiment directory
 export WORKDIR="/data"
 export EXPTDIR="/data/experiments/test_CONUS_25km_GFSv15p2"

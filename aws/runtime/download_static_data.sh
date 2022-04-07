@@ -1,15 +1,17 @@
 #! /bin/bash
 
+# Copyright UCAR (C) 2022
+
 # setup the directory
 static_data_root="/data/static"
 mkdir -p "${static_data_root}"
 cd "${static_data_root}" || exit 1
 
 # download the data from S3
-aws s3 cp s3://srw-data/NaturalEarth.tar.gz .
-aws s3 cp s3://srw-data/climo_fields_netcdf.tar.gz .
-aws s3 cp s3://srw-data/fix_am.tar.gz .
-aws s3 cp s3://srw-data/fix_orog.tar.gz .
+aws s3 cp --request-payer requester s3://srw-data/NaturalEarth.tar.gz .
+aws s3 cp --request-payer requester s3://srw-data/climo_fields_netcdf.tar.gz .
+aws s3 cp --request-payer requester s3://srw-data/fix_am.tar.gz .
+aws s3 cp --request-payer requester s3://srw-data/fix_orog.tar.gz .
 
 # unpack the files and clean up
 for file in NaturalEarth.tar.gz climo_fields_netcdf.tar.gz fix_am.tar.gz fix_orog.tar.gz; do
