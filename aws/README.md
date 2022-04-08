@@ -3,6 +3,13 @@
 The following documentation shows how to install ParallelCluster, start a cluster on AWS, connect to
 the cluster, start a job on the cluster with Slurm, and stop the cluster.
 
+## AWS Region Change
+These scripts are setup to run in **us-east-1**.  If you want to change the region,
+you must: 1) change the AMI ID of the ParentImage in the CloudFormation template
+to be the _ParallelCluster-3.0.2 Amazon Linux 2 x86_64_ base image in your target
+region; 2) change the _region_ variable in the _init_srw_ function in both the 
+imagebuild.sh and srwcluster.sh scripts.
+
 ## Environment Setup
 
 ### Install Dependencies - ParallelCluster, AWS CLI, NodeJS, and jq:
@@ -171,6 +178,12 @@ _replace_ command is just a shortcut for _delete_ and _create_.
 
 ---
 ## ParallelCluster
+
+### Set AMI ID
+Edit the _srwcluster.sh_ script to change the AMI ID in the _init_srw_ function.
+
+### Set the subnet ID
+Edit the _srwcluster.sh_ script to change the subnet ID in the _init_srw_ function.
 
 ### Start command:
 ```
