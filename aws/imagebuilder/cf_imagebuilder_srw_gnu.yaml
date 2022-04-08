@@ -255,6 +255,7 @@ Resources:
                     - chown -R ec2-user.ec2-user rocoto
                     - echo 'export PATH="${HOME}/rocoto/bin:${PATH}"' | tee -a ~ec2-user/.bashrc
 
+
   SrwImageRecipe:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
@@ -281,7 +282,7 @@ Resources:
       InstanceTypes:
         - c5.xlarge
       KeyPair: hahnd
-      InstanceProfileName: EC2InstanceProfileForImageBuilder
+      InstanceProfileName: !Ref SrwImageBuilderInstanceProfile
       TerminateInstanceOnFailure: true
 
 
@@ -291,3 +292,28 @@ Resources:
       Name: srw-1-0-1
       ImageRecipeArn: !Ref SrwImageRecipe
       InfrastructureConfigurationArn: !Ref SrwImageBuilderInfrastructure
+
+  SrwImageBuilderInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: EC2InstanceProfileForSrwImageBuilder
+      Roles:
+        - !Ref SrwImageBuilderRole
+
+  SrwImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SrwImageBuilderRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: ec2.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+
