@@ -47,6 +47,7 @@ function create_stack()
     echo "Creating stack..."
     ${aws} cloudformation create-stack \
       --stack-name ${stack_name} \
+      --capabilities CAPABILITY_NAMED_IAM \
       --template-body file://./${cf_template_file} > /dev/null
 
     # wait for stack create completion
